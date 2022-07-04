@@ -4,17 +4,100 @@
  */
 package com.nazar.pertemuan10;
 
+import java.sql.*;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+
 /**
  *
  * @author alwi
  */
 public class FormKoneksi extends javax.swing.JFrame {
-
+    private static Connection koneksi;
+    private DefaultTableModel model;
+    
     /**
      * Creates new form FormKoneksi
      */
     public FormKoneksi() {
         initComponents();
+        model = new DefaultTableModel();
+        dataTable.setModel(model);
+        model.addColumn("ID");
+        model.addColumn("Nama");
+        model.addColumn("Alamat");
+        model.addColumn("Telepon");
+        ambilDataTable();
+    }
+    
+    private static Connection bukaKoneksi() {
+        if (koneksi == null) {
+            try {
+//                String url = "jdbc:mysql://localhost:3306/belajar";
+//                String user = "root";
+//                String password = "";
+                
+                String url = "jdbc:mysql://panel.irfan340.xyz:3306/praktikumpbo";
+                String user = "praktikumadmin";
+                String password = "praktikumadmin340";
+                
+                DriverManager.registerDriver(new com.mysql.cj.jdbc.Driver());
+                koneksi = DriverManager.getConnection(url, user, password);
+            } catch(SQLException e) {
+                System.out.println("Error membuat koneksi");
+            }
+        }
+        return koneksi;
+    }
+    
+    private void ambilDataTable() {
+        model.getDataVector().removeAllElements();
+        model.fireTableDataChanged();
+        try {
+            Connection c = bukaKoneksi();
+            Statement s = c.createStatement();
+            String sql = "SELECT * FROM anggota";
+            ResultSet r = s.executeQuery(sql);
+            
+            while (r.next()) {
+                Object[] o = new Object[4];
+                o[0] = r.getString("id");
+                o[1] = r.getString("nama");
+                o[2] = r.getString("alamat");
+                o[3] = r.getString("telp");
+                model.addRow(o);
+            }
+            r.close();
+            s.close();
+            ambilTableKlik();
+        } catch(SQLException e) {
+            System.out.println("Terjadi kesalahan " + e.getMessage());
+        }
+    }
+    
+    private void ambilTableKlik() {
+        int i = dataTable.getSelectedRow();
+        if (i == -1) {
+            return;
+        }
+        String kode = (String) model.getValueAt(i, 0);
+        kodeLabel.setText(kode);
+        String nama = (String) model.getValueAt(i, 1);
+        namaTextField.setText(nama);
+        String alamat = (String) model.getValueAt(i, 2);
+        alamatTextField.setText(alamat);
+        String telp = (String) model.getValueAt(i, 3);
+        teleponTextField.setText(telp);
+        
+        addButton.setEnabled(false);
+    }
+    
+    private void backIntoDefaultState() {
+        kodeLabel.setText("0");
+        namaTextField.setText("");
+        alamatTextField.setText("");
+        teleponTextField.setText("");
+        addButton.setEnabled(true);
     }
 
     /**
@@ -174,22 +257,94 @@ public class FormKoneksi extends javax.swing.JFrame {
 
     private void addButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addButtonActionPerformed
         // TODO add your handling code here:
+        Connection c = bukaKoneksi();
+        
+        if ("Add".equals(addButton.getText())) {
+            addButton.setText("Save");
+            editButton.setText("Cancel");
+            deleteButton.setEnabled(false);
+            refreshButton.setEnabled(false);
+        } else if ("Save".equals(addButton.getText())) {
+            String sqlKode = "INSERT INTO anggota (nama, alamat, telp) VALUES " +
+                            " ('" + namaTextField.getText() + "', " +
+                            " '" + alamatTextField.getText() + "', " +
+                            " '" + teleponTextField.getText() + "');";
+            
+            try {
+                PreparedStatement p2 = (PreparedStatement) c.prepareStatement(sqlKode);
+                p2.executeUpdate();
+                p2.close();
+                
+                backIntoDefaultState();
+            } catch(SQLException e) {
+                JOptionPane.showMessageDialog(this, "Terjadi kesalahan " + e.getMessage());
+            }
+            
+            addButton.setText("Add");
+            editButton.setText("Edit");
+            deleteButton.setEnabled(true);
+            refreshButton.setEnabled(true);
+        } else if ("Update".equals(addButton.getText())) {
+            String sqlKode = "UPDATE anggota SET nama = '" + namaTextField.getText() + "'," +
+                    " alamat = '" + alamatTextField.getText() + "'" +
+                    " WHERE ID = '" + kodeLabel.getText() + "';";
+            
+            try {
+                PreparedStatement p2 = (PreparedStatement) c.prepareStatement(sqlKode);
+                p2.executeUpdate();
+                p2.close();
+                
+                backIntoDefaultState();
+            } catch(SQLException e) {
+                JOptionPane.showMessageDialog(this, "Terjadi kesalahan " + e.getMessage());
+            }
+            
+            addButton.setText("Add");
+            editButton.setText("Edit");
+            deleteButton.setEnabled(true);
+            refreshButton.setEnabled(true);
+        }
     }//GEN-LAST:event_addButtonActionPerformed
 
     private void editButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_editButtonActionPerformed
         // TODO add your handling code here:
+        if ("Edit".equals(editButton.getText())) {
+            addButton.setText("Update");
+            editButton.setText("Cancel");
+            addButton.setEnabled(true);
+            deleteButton.setEnabled(false);
+            refreshButton.setEnabled(false);
+        } else if ("Cancel".equals(editButton.getText())) {
+            addButton.setText("Add");
+            editButton.setText("Edit");
+            deleteButton.setEnabled(true);
+            refreshButton.setEnabled(true);
+        }
     }//GEN-LAST:event_editButtonActionPerformed
 
     private void deleteButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_deleteButtonActionPerformed
         // TODO add your handling code here:
+        Connection c = bukaKoneksi();
+        String sqlKode = "DELETE FROM anggota " + "WHERE id = '" + kodeLabel.getText() + "';";
+        
+        try {
+            PreparedStatement p2 = (PreparedStatement) c.prepareStatement(sqlKode);
+            p2.executeUpdate();
+            p2.close();
+        } catch(SQLException e) {
+            JOptionPane.showMessageDialog(this, "Terjadi kesalahan " + e.getMessage());
+        }
     }//GEN-LAST:event_deleteButtonActionPerformed
 
     private void refreshButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_refreshButtonActionPerformed
         // TODO add your handling code here:
+        ambilDataTable();
+        backIntoDefaultState();
     }//GEN-LAST:event_refreshButtonActionPerformed
 
     private void dataTableMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_dataTableMouseClicked
         // TODO add your handling code here:
+        ambilTableKlik();
     }//GEN-LAST:event_dataTableMouseClicked
 
     /**
